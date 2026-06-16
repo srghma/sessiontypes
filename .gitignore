@@ -18,3 +18,11 @@ cabal.sandbox.config
 .stack-work/
 cabal.project.local
 .HTF/
+/.lake
+.lake/
+lake-packages/
+lakefile.olean
+lake-manifest.json
+*.olean
+*.ilean
+*.c
