@@ -14,7 +14,7 @@ class MonadSession (m : Cap → Cap → Type → Type 1) [IxMonad m] where
   offZ : {ctx : List ST} → {s : ST} → {j : Cap} → {α : Type} → m ⟨ctx, s⟩ j α → m ⟨ctx, .off [s]⟩ j α
   offS : {ctx : List ST} → {s t : ST} → {xs : List ST} → {j : Cap} → {α : Type} → m ⟨ctx, s⟩ j α → m ⟨ctx, .off (t :: xs)⟩ j α → m ⟨ctx, .off (s :: t :: xs)⟩ j α
   recurse : {ctx : List ST} → {s : ST} → {j : Cap} → {α : Type} → m ⟨s :: ctx, s⟩ j α → m ⟨ctx, .r s⟩ j α
-  weaken : {ctx : List ST} → {s t : ST} → {j : Cap} → {α : Type} → m ⟨ctx, s⟩ j α → m ⟨t :: ctx, .wk s⟩ j α
+  weaken : {ctx : List ST} → {t : ST} → {s : ST} → {j : Cap} → {α : Type} → m ⟨ctx, t⟩ j α → m ⟨s :: ctx, .wk t⟩ j α
   var : {ctx : List ST} → {s : ST} → {j : Cap} → {α : Type} → m ⟨s :: ctx, s⟩ j α → m ⟨s :: ctx, .v⟩ j α
   eps : {ctx : List ST} → {α : Type} → α → m ⟨ctx, .eps⟩ ⟨ctx, .eps⟩ α
 
@@ -34,6 +34,12 @@ instance {M : Type → Type} [Monad M] : MonadSession (STTerm M) where
 def empty0 [IxMonad m] [MonadSession m] {r : ST} : m ⟨[], r⟩ ⟨[], r⟩ Unit :=
   IxApplicative.pure ()
 
+/-- Allows indexing of selections. -/
+def selN [IxMonad m] [MonadSession m] {ctx : List ST} {s : ST} {xs : List ST} (r : Ref s xs) : m ⟨ctx, .sel xs⟩ ⟨ctx, s⟩ Unit :=
+  match r with
+  | .RefZ => MonadSession.sel1
+  | .RefS next => MonadSession.sel2 ix_then selN next
+
 /-- Select the first branch of a selection. -/
 def selN1 [IxMonad m] [MonadSession m] {ctx : List ST} {s : ST} {xs : List ST} : m ⟨ctx, .sel (s :: xs)⟩ ⟨ctx, s⟩ Unit :=
   MonadSession.sel1
@@ -41,6 +47,11 @@ def selN1 [IxMonad m] [MonadSession m] {ctx : List ST} {s : ST} {xs : List ST} :
 /-- Select the second branch of a selection. -/
 def selN2 [IxMonad m] [MonadSession m] {ctx : List ST} {s t : ST} {xs : List ST} : m ⟨ctx, .sel (s :: t :: xs)⟩ ⟨ctx, t⟩ Unit :=
   MonadSession.sel2 ix_then MonadSession.sel1
+
+/-- Takes two session typed programs and constructs an offering consisting of two branches. -/
+def offer [IxMonad m] [MonadSession m] {ctx : List ST} {s t : ST} {j : Cap} {α : Type}
+  (s_prog : m ⟨ctx, s⟩ j α) (t_prog : m ⟨ctx, t⟩ j α) : m ⟨ctx, .off [s, t]⟩ j α :=
+  MonadSession.offS s_prog (MonadSession.offZ t_prog)
 
 /-- Monadic composable definition of recurse. -/
 def recurse0 [IxMonad m] [MonadSession m] {ctx : List ST} {s : ST} : m ⟨ctx, .r s⟩ ⟨s :: ctx, s⟩ Unit :=

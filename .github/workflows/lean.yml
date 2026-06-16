@@ -17,3 +17,5 @@ jobs:
           echo "$HOME/.elan/bin" >> $GITHUB_PATH
       - name: Build
         run: lake build
+      - name: Test
+        run: lake exe SessionTypesTestsExe
